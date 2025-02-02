@@ -171,7 +171,7 @@ void modConfigLoadDefaultConfig(modConfigGeneralConfigStructTypedef *configLocat
 	configLocation->CANIDStyle                                     	= CANIDStyleVESC;          		// CAN ID default Style.
 	//configLocation->emitStatusOverCAN                              	= false;                   		// Send status over can.
 	configLocation->emitStatusOverCAN                               = true;                        // Send status over can.
-	configLocation->canBusSpeed                                    	= canSpeedBaud500k;        		// 500k CAN baud
+	configLocation->canBusSpeed                                    	= canSpeedBaud250k;        		// 500k CAN baud
 	configLocation->emitStatusProtocol                             	= canEmitProtocolVESC; 			// Can emit protocol set to MG style for backwards compatibility
 	configLocation->tempEnableMaskBMS                              	= 0x0001;				// Bitwise select what sensor to enable for the BMS (internal sensors).
 	//configLocation->tempEnableMaskBattery                         = 0xFFFF;				// Bitwise select what sensor to enable for the battery (external sensors).
@@ -216,6 +216,8 @@ void modConfigLoadDefaultConfig(modConfigGeneralConfigStructTypedef *configLocat
 	configLocation->lastICMask					= 0;
 	configLocation->humidityICType 				 	= 0;
 	configLocation->BMSApplication					= electricVehicle;
+	configLocation->minimalPrechargePercentage          = 0.50f;                // output should be at a minimal of 80% of input voltage.
+	configLocation->timeoutLCPreCharge              = 3.0*1000;             // Precharge error timeout, allow 1.5 seconds pre-charge time before declaring load error.
 
 #elif ENNOID_LV_2
 	configLocation->noOfCellsSeries					= 12;					// Total number of cells in series in the battery pack

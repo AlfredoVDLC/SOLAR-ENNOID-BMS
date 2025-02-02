@@ -152,7 +152,23 @@ void modCANInit(modPowerElectronicsPackStateTypedef *packState, modConfigGeneral
 	modCANErrorLastTick = HAL_GetTick();
 }
 
-void modCANTask(void){		
+void modCANTask(void){
+  //*********AE 06.01.2025****
+  uint16_t chargevoltage = 49100; //max charge voltage in mv
+  uint16_t chargecurrent = 30000; //max charge current in ma
+  uint16_t disvoltage = 42000; // min discharge voltage in mv
+  uint16_t discurrent = 30000; // max discharge current in ma
+  uint16_t SOH = 100; // SOH place holder
+  uint16_t SOC = 99; // SOC place holder
+  float PackVoltage = 48.3; // Pack Voltage place holder
+  float currentact  = 11.1; // Pack actual Current place holder
+  float AvgTemperature = 23.1; // Pack actual temperature place holder
+  int32_t sendIndex;
+  uint8_t buffer[8];
+  uint8_t bmsname[8] = {'E', 'N', 'N', 'O', 'I', 'D', 'M', 'S'};
+  uint8_t bmsmanu[8] = {'A', 'L', 'F', 'R', 'E', 'D', 'O', 'E'};
+  //**************************
+
 	// Manage HAL CAN driver's active state
 	if((modCANHandle.State != HAL_CAN_STATE_BUSY_RX)) {
 				//		if(modDelayTick1ms(&modCANErrorLastTick,1000))
@@ -175,7 +191,61 @@ void modCANTask(void){
 				modCANSendStatusVESC();
 		}
 	}
-	
+	//AE 06.01.2025 VICTRON Communications
+
+	if(modDelayTick1ms(&modCANSendStatusFastLastTisk,200)){
+	  // Send Charge and Discharge Current and voltage limits to Viscton GX device
+	      sendIndex = 0;
+	      libBufferAppend_int16_LSBFirst(buffer, chargevoltage / 100, &sendIndex); //Maximun Charge Voltage (upper voltage limit)
+	      libBufferAppend_int16_LSBFirst(buffer, chargecurrent / 100, &sendIndex); //Maximun Charge Current
+	      libBufferAppend_int16_LSBFirst(buffer, discurrent  / 100, &sendIndex); //Maximun discharge Current
+	      libBufferAppend_int16_LSBFirst(buffer, disvoltage  / 100, &sendIndex); //Minumun voltage limit for battery
+	      modCANTransmitStandardID(0x351, buffer, sendIndex);
+
+
+	  // Send SOH and SOC to Victron GX device
+	      sendIndex = 0;
+	      SOC = modCANPackStateHandle->SoC;
+	      SOH = 100; // AE25.01.2025 Not implemented in ENNOID 5.2, (try to have a look to ENNOID version 6, that has it).
+	      libBufferAppend_int16_LSBFirst(buffer, SOC, &sendIndex); //Actual State of Charge
+	      libBufferAppend_int16_LSBFirst(buffer, SOH, &sendIndex); //Actual State of Health
+	      libBufferAppend_int16_LSBFirst(buffer, SOC * 10, &sendIndex); //Actual State of charge x10
+	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
+	      modCANTransmitStandardID(0x355, buffer, sendIndex);
+
+
+	  // Send Actual Voltage Current and Temperature to Victron GX device
+	      sendIndex = 0;
+	      PackVoltage = modCANPackStateHandle->packVoltage;
+	      currentact = modCANPackStateHandle->packCurrent;
+	      AvgTemperature = modCANPackStateHandle->tempBatteryAverage;
+
+	      libBufferAppend_int16_LSBFirst(buffer, (uint16_t)(PackVoltage * 100), &sendIndex); //Actual State of Charge
+	      libBufferAppend_int16_LSBFirst(buffer, (uint16_t)(currentact * 10), &sendIndex); //Actual State of Health
+	      libBufferAppend_int16_LSBFirst(buffer, (uint16_t)(AvgTemperature * 10), &sendIndex); //Actual State of charge x10
+	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
+	      modCANTransmitStandardID(0x356, buffer, sendIndex);
+
+
+	  // Send Alarm and warning to Victron GX device (TBD) --> All zeros no Error, no Warning
+	      sendIndex = 0;
+	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
+	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
+	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
+	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
+	      modCANTransmitStandardID(0x35A, buffer, sendIndex);
+
+
+	  // Send bms name to Victron GX device
+	      sendIndex = 8;
+	      modCANTransmitStandardID(0x370, bmsname, sendIndex);
+
+
+	  // Send bms manufacturer name to Victron GX device
+	      sendIndex = 8;
+	      modCANTransmitStandardID(0x35E, bmsmanu, sendIndex);
+	  }
+
 	if(modDelayTick1ms(&modCANSafetyCANMessageTimeout,5000))
 		modCANPackStateHandle->safetyOverCANHCSafeNSafe = false;
 		
