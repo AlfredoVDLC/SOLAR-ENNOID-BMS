@@ -1,0 +1,46 @@
+FormatVersion=5.0 // Do not edit!
+FloatDecimalPlaces=0
+Title="BMS Victron GX communications"
+
+{RECEIVE}
+
+[M1 BMStoVICTRONLimits,I,V]
+ID=351h
+DLC=8
+Var=S1_MaxChargeVoltage unsigned 0,16 -v /u:V /f:0.1 /p:2
+Var=S2_MaxChargeCurrent unsigned 16,16 /u:A /f:0.1 /p:2
+Var=S3_MaxDischargeCurrent unsigned 32,16 /u:A /p:2
+Var=S4_MinDischargeVoltage unsigned 48,16 /u:V /p:2
+
+{SENDRECEIVE}
+
+[M2 BMStoVICTRON SOC and SOH]
+ID=355h
+DLC=8
+Var=S1_SOC unsigned 0,16 /u:% /p:2
+Var=S2_SOH unsigned 16,16 /u:% /p:2 /ln:"State of Health"
+Var=S3_10xSOC unsigned 32,16 /u:%1000 /p:2 /ln:"10x State of Charge"
+Var=S4_0_Stuffing unsigned 48,16
+
+[M3 ActualVoltageCurrentTemp]
+ID=356h
+DLC=8
+Var=S1_ActualPackVoltage unsigned 0,16 /u:V /f:0.01 /p:2
+Var=S2_ActualPackCurrent unsigned 16,16 /u:A /f:0.1 /p:2
+Var=S3_ActualPackAvgTemperature unsigned 32,16 /u:ºC /f:0.1 /p:2
+Var=S4_0_Stuffing unsigned 48,16
+
+[M4 Alarms and Warnings]
+ID=35Ah
+DLC=8
+
+[M5 BMS NAME]
+ID=370h
+DLC=8
+Var="BMS NAME" string 0,64
+
+[M6 BMS MANUFACTURER NAME]
+ID=35Eh
+DLC=8
+Var="MANUFACTURER NAME" string 0,64
+

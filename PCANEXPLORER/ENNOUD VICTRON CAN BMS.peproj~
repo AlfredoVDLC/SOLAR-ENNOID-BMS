@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PCANExplorerProject Version="5.0" Name="ENNOUD VICTRON CAN BMS">
+    <Connections AutoReset="0" IgnoreRTRLength="0" ProcessRTR="1">
+        <Connection Bus="1" Enabled="1" Protocol="0" SymbolsFileName="BMS ENNOID VICTRON CANBUS.sym" BitRate="284" Connection="CAN0@pcan_usb" Name="CAN0"/>
+    </Connections>
+    <MessageFilters/>
+    <Files>
+        <File RelativePath="BMS ENNOID VICTRON CANBUS.sym"/>
+    </Files>
+</PCANExplorerProject>
