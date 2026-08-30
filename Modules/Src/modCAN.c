@@ -77,6 +77,8 @@ bool modCANPing(uint8_t controller_id, HW_TYPE *hw_type) {
 }
 
 */
+#define FILTER_SIZE 8   // Número de muestras para el promedio (ajustable)
+
 
 void modCANInit(modPowerElectronicsPackStateTypedef *packState, modConfigGeneralConfigStructTypedef *generalConfigPointer){
   static CanTxMsgTypeDef        TxMessage;
@@ -150,24 +152,26 @@ void modCANInit(modPowerElectronicsPackStateTypedef *packState, modConfigGeneral
 	modCANSendStatusVESCLastTisk = HAL_GetTick();
 	modCANSafetyCANMessageTimeout = HAL_GetTick();
 	modCANErrorLastTick = HAL_GetTick();
+
 }
 
 void modCANTask(void){
   //*********AE 06.01.2025****
   uint16_t chargevoltage = 49100; //max charge voltage in mv
-  uint16_t chargecurrent = 30000; //max charge current in ma
+  uint16_t chargecurrent = 100; //max charge current in A
   uint16_t disvoltage = 42000; // min discharge voltage in mv
-  uint16_t discurrent = 30000; // max discharge current in ma
+  uint16_t discurrent = 100; // max discharge current in A
   uint16_t SOH = 100; // SOH place holder
   uint16_t SOC = 99; // SOC place holder
   float PackVoltage = 48.3; // Pack Voltage place holder
-  float currentact  = 11.1; // Pack actual Current place holder
+  //float currentact  = 11.1; // Pack actual Current place holder
   float AvgTemperature = 23.1; // Pack actual temperature place holder
   int32_t sendIndex;
   uint8_t buffer[8];
   uint8_t bmsname[8] = {'E', 'N', 'N', 'O', 'I', 'D', 'M', 'S'};
   uint8_t bmsmanu[8] = {'A', 'L', 'F', 'R', 'E', 'D', 'O', 'E'};
   //**************************
+
 
 	// Manage HAL CAN driver's active state
 	if((modCANHandle.State != HAL_CAN_STATE_BUSY_RX)) {
@@ -196,10 +200,10 @@ void modCANTask(void){
 	if(modDelayTick1ms(&modCANSendStatusFastLastTisk,200)){
 	  // Send Charge and Discharge Current and voltage limits to Viscton GX device
 	      sendIndex = 0;
-	      libBufferAppend_int16_LSBFirst(buffer, chargevoltage / 100, &sendIndex); //Maximun Charge Voltage (upper voltage limit)
-	      libBufferAppend_int16_LSBFirst(buffer, chargecurrent / 100, &sendIndex); //Maximun Charge Current
-	      libBufferAppend_int16_LSBFirst(buffer, discurrent  / 100, &sendIndex); //Maximun discharge Current
-	      libBufferAppend_int16_LSBFirst(buffer, disvoltage  / 100, &sendIndex); //Minumun voltage limit for battery
+	      libBufferAppend_int16_LSBFirst(buffer, chargevoltage / 100, &sendIndex); //Maximun Charge Voltage (upper voltage limit) [mV / 100]
+	      libBufferAppend_int16_LSBFirst(buffer, chargecurrent * 10, &sendIndex); //Maximun Charge Current [A x 10]
+	      libBufferAppend_int16_LSBFirst(buffer, discurrent  * 10, &sendIndex); //Maximun discharge Current [A x 10]
+	      libBufferAppend_int16_LSBFirst(buffer, disvoltage  / 100, &sendIndex); //Minumun voltage limit for battery [mV / 100]
 	      modCANTransmitStandardID(0x351, buffer, sendIndex);
 
 
@@ -217,12 +221,27 @@ void modCANTask(void){
 	  // Send Actual Voltage Current and Temperature to Victron GX device
 	      sendIndex = 0;
 	      PackVoltage = modCANPackStateHandle->packVoltage;
-	      currentact = modCANPackStateHandle->packCurrent;
+	      /////////////////////////////////////////CURRENT FILTER AE 14.11.2025
+	      static float currentact = 0.0f;
+	          static uint32_t last_time_ms = 0;
+
+	          uint32_t now = HAL_GetTick();
+	          float dt = (now - last_time_ms) / 1000.0f;
+	          last_time_ms = now;
+
+	          if (dt > 0.0f) {
+	              const float tau = 5.0f;
+	              float alpha = dt / (tau + dt);
+	              currentact += alpha * (modCANPackStateHandle->packCurrent - currentact);
+	          }
+	      ///////////////////////////////////////////////////////////////
+	      //currentact = modCANPackStateHandle->packCurrent;// AE04.11.2025
+	      //currentact = Filter_Update(&corriente_filtro, modCANPackStateHandle->packCurrent);// AE04.11.2025
 	      AvgTemperature = modCANPackStateHandle->tempBatteryAverage;
 
-	      libBufferAppend_int16_LSBFirst(buffer, (uint16_t)(PackVoltage * 100), &sendIndex); //Actual State of Charge
-	      libBufferAppend_int16_LSBFirst(buffer, (uint16_t)(currentact * 10), &sendIndex); //Actual State of Health
-	      libBufferAppend_int16_LSBFirst(buffer, (uint16_t)(AvgTemperature * 10), &sendIndex); //Actual State of charge x10
+	      libBufferAppend_int16_LSBFirst(buffer, (uint16_t)(PackVoltage * 100), &sendIndex); //Actual Pack Voltage x100
+	      libBufferAppend_int16_LSBFirst(buffer, (int16_t)(currentact * 10), &sendIndex); //Actual Pack Current x100
+	      libBufferAppend_int16_LSBFirst(buffer, (int16_t)(AvgTemperature * 10), &sendIndex); //Actual Temperature x10
 	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
 	      modCANTransmitStandardID(0x356, buffer, sendIndex);
 
