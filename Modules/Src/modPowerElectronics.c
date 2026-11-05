@@ -20,9 +20,34 @@
 
 #include "modPowerElectronics.h"
 #include "modTerminal.h"
+#include "modCurrentSource.h"
 
+extern bool modCANGetLEMCAB500Current(float *current);
 modPowerElectronicsPackStateTypedef *modPowerElectronicsPackStateHandle;
 modConfigGeneralConfigStructTypedef *modPowerElectronicsGeneralConfigHandle;
+static modCurrentSourceState currentSource;
+
+bool modPowerElectronicsCurrentReady(void) {
+	return currentSource.ready && !currentSource.fault;
+}
+bool modPowerElectronicsCurrentFault(void) { return currentSource.fault; }
+
+static void modPowerElectronicsUpdateCurrentSource(void) {
+	float sample = 0.0f;
+	bool lem = modPowerElectronicsGeneralConfigHandle->packCurrentDataSource == sourcePackCurrentCANLEMCAB500;
+	bool fresh = !lem || modCANGetLEMCAB500Current(&sample);
+	modCurrentSourceUpdate(&currentSource, lem, fresh, HAL_GetTick());
+	if(lem && fresh && !currentSource.fault)
+		modPowerElectronicsPackStateHandle->packCurrent = sample;
+	if(!modPowerElectronicsCurrentReady()) {
+		modPowerElectronicsPackStateHandle->chargeAllowed = false;
+		modPowerElectronicsPackStateHandle->disChargeLCAllowed = false;
+		if(currentSource.fault)
+			modPowerElectronicsPackStateHandle->faultState = FAULT_CODE_CURRENT_SENSOR;
+		modPowerElectronicsUpdateSwitches();
+	}
+}
+
 
 uint32_t modPowerElectronicsCANCurrentVESCLastTick;
 
@@ -181,6 +206,7 @@ void modPowerElectronicsInit(modPowerElectronicsPackStateTypedef *packState, mod
 };
 
 bool modPowerElectronicsTask(void) {
+	modPowerElectronicsUpdateCurrentSource();
 	bool returnValue = false;
 	// Static variable for SHT measure timer
 
@@ -261,6 +287,7 @@ bool modPowerElectronicsTask(void) {
 		
 		// Check and respond to the measured temperature values
 		modPowerElectronicsCheckPackSOA();
+		modPowerElectronicsUpdateCurrentSource();
 		
 		modPowerElectronicsPackStateHandle->powerButtonActuated = modPowerStateGetButtonPressedState();
 		
@@ -551,7 +578,8 @@ void modPowerElectronicsSubTaskVoltageWatch(void) {
 
 void 	modPowerElectronicsSubTaskCurrentWatch(void){
 		// Handle over current limits 
-	if(modPowerElectronicsPackStateHandle->packCurrent > modPowerElectronicsGeneralConfigHandle->maxAllowedCurrent){
+	if((modPowerElectronicsGeneralConfigHandle->packCurrentDataSource == sourcePackCurrentCANLEMCAB500 ?
+	    fabsf(modPowerElectronicsPackStateHandle->packCurrent) : modPowerElectronicsPackStateHandle->packCurrent) > modPowerElectronicsGeneralConfigHandle->maxAllowedCurrent){
 			modPowerElectronicsPackStateHandle->packOperationalCellState = PACK_STATE_ERROR_OVER_CURRENT;
 			modPowerElectronicsPackStateHandle->disChargeLCAllowed = false;
 			modPowerElectronicsPackStateHandle->chargeAllowed = false;
@@ -560,6 +588,17 @@ void 	modPowerElectronicsSubTaskCurrentWatch(void){
 
 // Update switch states, should be called after every desired/allowed switch state change
 void modPowerElectronicsUpdateSwitches(void) {
+	// A missing selected sensor cannot be bypassed by forced-on or retry logic.
+	if(!modPowerElectronicsCurrentReady()) {
+		driverHWSwitchesSetSwitchState(SWITCH_PRECHARGE, SWITCH_RESET);
+		driverHWSwitchesSetSwitchState(SWITCH_DISCHARGEHV, SWITCH_RESET);
+		driverHWSwitchesSetSwitchState(SWITCH_DISCHARGE, SWITCH_RESET);
+		driverHWSwitchesSetSwitchState(SWITCH_CHARGE, SWITCH_RESET);
+		#if (HAS_PFET_OUTPUT)
+		driverHWSwitchesSetSwitchState(SWITCH_CHARGE_BYPASS, SWITCH_RESET);
+		#endif
+		return;
+	}
 	// Do the actual power switching in here
 	
 	//Handle precharge output
@@ -1299,6 +1338,9 @@ float modPowerElectronicsCalcPackCurrent(void){
 	float returnCurrentTemp = 0.0f;
 
 	switch(modPowerElectronicsGeneralConfigHandle->packCurrentDataSource){
+		case sourcePackCurrentCANLEMCAB500:
+			returnCurrent = modPowerElectronicsPackStateHandle->packCurrent;
+			break;
 		case sourcePackCurrentISL28022:
 			returnCurrent = modPowerElectronicsPackStateHandle->loCurrentLoadCurrent;
 			break;

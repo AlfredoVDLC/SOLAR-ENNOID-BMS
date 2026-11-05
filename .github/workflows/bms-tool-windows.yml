@@ -1,0 +1,40 @@
+name: Build BMS Tool for Windows
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/selectable-lem-current]
+    paths:
+      - 'ENNOID-BMS-ToolV5.02-alpha2_win32/Fuentes/**'
+      - '.github/workflows/bms-tool-windows.yml'
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '5.15.2'
+          arch: win64_mingw81
+          tools: 'tools_mingw,qt.tools.win64_mingw810'
+          cache: true
+      - name: Configure and build
+        shell: pwsh
+        working-directory: ENNOID-BMS-ToolV5.02-alpha2_win32/Fuentes/ENNOID-BMS-Tool-V/ENNOID-BMS-Tool-V
+        run: |
+          $env:PATH = "$env:IQTA_TOOLS\mingw810_64\bin;$env:PATH"
+          Remove-Item .qmake.stash -ErrorAction SilentlyContinue
+          qmake ENNOID-BMS-Tool.pro "CONFIG+=release" "CONFIG-=debug"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          mingw32-make -j2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force package | Out-Null
+          Copy-Item release/*.exe package/
+          $exe = (Get-ChildItem package/*.exe | Select-Object -First 1).FullName
+          windeployqt --release --compiler-runtime $exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BMS-Tool-Windows-LEM-5.2.1-rc1
+          path: ENNOID-BMS-ToolV5.02-alpha2_win32/Fuentes/ENNOID-BMS-Tool-V/ENNOID-BMS-Tool-V/package/

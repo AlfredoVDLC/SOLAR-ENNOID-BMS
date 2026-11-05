@@ -594,6 +594,7 @@ QString Commands::faultStateToStr(bms_fault_code fault)
     case FAULT_CODE_PRECHARGE_TIMEOUT: return "Precharge timeout";
     case FAULT_CODE_DISCHARGE_RETRY: return "Discharge retry";
     case FAULT_CODE_CHARGE_RETRY: return "Charge retry";
+    case FAULT_CODE_CURRENT_SENSOR: return "Current sensor lost or invalid (restart required)";
     case FAULT_CODE_CHARGER_DISCONNECT: return "Charge retry";
     default: return "Unknown fault";
     }

@@ -47,10 +47,10 @@ uint32_t modOperationalStatePSPDisableDelay;
 uint32_t modOperationalStateWatchDogCountdownLastTick;
 bool modOperationalStateForceOn;
 
-// CODEX 2026-10-07: Populate separate shunt and LEM display readings; packCurrent remains the BMS control value.
+// Display the physical shunt independently of the selected control current.
 static void modOperationalStateUpdateDisplayCurrents(void) {
 	float lemCurrent;
-	modOperationalStateDisplayData.ShuntCurrent = fabsf(modOperationalStatePackStatehandle->packCurrent);
+	modOperationalStateDisplayData.ShuntCurrent = fabsf(modOperationalStatePackStatehandle->loCurrentLoadCurrent);
 	modOperationalStateDisplayData.LEMCurrentValid = modCANGetLEMCAB500Current(&lemCurrent);
 	modOperationalStateDisplayData.LEMCurrent = modOperationalStateDisplayData.LEMCurrentValid ? fabsf(lemCurrent) : 0.0f;
 }
@@ -478,6 +478,16 @@ void modOperationalStateTask(void) {
 		modOperationalStateUpdateStates();		
 	}
 	
+	// LEM sensor faults are latched until reboot, including in forced-on mode.
+	if(modPowerElectronicsCurrentFault()) {
+		modOperationalStatePackStatehandle->faultState = FAULT_CODE_CURRENT_SENSOR;
+		if(modOperationalStateCurrentState != OP_STATE_ERROR &&
+		   modOperationalStateCurrentState != OP_STATE_POWER_DOWN) {
+			modOperationalStateSetNewState(OP_STATE_ERROR);
+			modOperationalStateUpdateStates();
+		}
+	}
+
 	// In case of extreme currents goto error state
 	if((modOperationalStatePackStatehandle->packOperationalCellState == PACK_STATE_ERROR_OVER_CURRENT) && (modOperationalStatePackStatehandle->packOperationalCellState != packOperationalCellStateLastErrorState)){
 		packOperationalCellStateLastErrorState = modOperationalStatePackStatehandle->packOperationalCellState; // Meganism to make error situation only trigger once

@@ -186,4 +186,7 @@ void  modPowerElectronicsLCSenseInit(void);
 uint16_t modPowerElectronicsLowestInThree(uint16_t num1,uint16_t num2,uint16_t num3);
 void  modPowerElectronicsResetCurrentOffset(void);
 
+bool modPowerElectronicsCurrentReady(void);
+bool modPowerElectronicsCurrentFault(void);
+
 #endif

@@ -73,7 +73,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QLoggingCategory::setFilterRules("qt.network.ssl.warning=false");
 
-    mVersion = QString::number(DT_VERSION);
+    mVersion = QString::number(DT_VERSION) + " (Solar 5.2.1-rc1)";
     mDieBieMS = new BMSInterface(this);
     mStatusInfoTime = 0;
     mStatusLabel = new QLabel(this);

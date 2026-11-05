@@ -111,7 +111,8 @@ typedef enum {
 	FAULT_CODE_CHARGE_RETRY,
 	FAULT_CODE_CAN_DELAYED_POWER_DOWN,
 	FAULT_CODE_NOT_USED_TIMEOUT,
-	FAULT_CODE_CHARGER_DISCONNECT
+	FAULT_CODE_CHARGER_DISCONNECT,
+	FAULT_CODE_CURRENT_SENSOR
 } bms_fault_state;
 
 typedef enum {
@@ -795,7 +796,8 @@ typedef enum {
 	sourcePackCurrentCANDieBieShunt,
 	sourcePackCurrentCANIsaBellenHuette,
 	sourcePackCurrentINA226,
-	sourcePackCurrentCANVESC
+	sourcePackCurrentCANVESC,
+	sourcePackCurrentCANLEMCAB500 = 6
 } configPackCurrentDataSourceEnum;
 
 typedef enum {

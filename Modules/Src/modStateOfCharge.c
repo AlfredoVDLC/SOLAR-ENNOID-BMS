@@ -47,7 +47,8 @@ void modStateOfChargeProcess(void){
 	lastGeneralStateOfCharge = modStateOfChargeGeneralStateOfCharge;
 	
 	modStateOfChargeLargeCoulombTick = HAL_GetTick();
-	modStateOfChargeGeneralStateOfCharge.remainingCapacityAh += dt*modStateOfChargePackStatehandle->packCurrent/(3600*1000);// (miliseconds * amps)/(3600*1000) accumulatedCharge in AmpHour.
+	if(modPowerElectronicsCurrentReady())
+		modStateOfChargeGeneralStateOfCharge.remainingCapacityAh += dt*modStateOfChargePackStatehandle->packCurrent/(3600*1000);// (miliseconds * amps)/(3600*1000) accumulatedCharge in AmpHour.
 	
 	// Cap the max stored energy to the configured battery capacity.
 	if(modStateOfChargeGeneralStateOfCharge.remainingCapacityAh > modStateOfChargeGeneralConfigHandle->batteryCapacity)

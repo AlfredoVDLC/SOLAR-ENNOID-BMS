@@ -19,11 +19,13 @@
  */
 
 #include "modCAN.h"
+#include "modCurrentSource.h"
 
 // Variables
 CAN_HandleTypeDef      modCANHandle;
 uint32_t               modCANErrorLastTick;
 uint32_t               modCANSendStatusFastLastTisk;
+static uint32_t modCANSendVictronLastTick;
 uint32_t               modCANSendStatusSlowLastTisk;
 uint32_t               modCANSendStatusVESCLastTisk;
 uint32_t               modCANSafetyCANMessageTimeout;
@@ -53,7 +55,7 @@ static can_status_msg_2 stat_msgs_2[CAN_STATUS_MSGS_TO_STORE];
 static can_status_msg_3 stat_msgs_3[CAN_STATUS_MSGS_TO_STORE];
 static can_status_msg_4 stat_msgs_4[CAN_STATUS_MSGS_TO_STORE];
 static can_status_msg_5 stat_msgs_5[CAN_STATUS_MSGS_TO_STORE];
-// CODEX 2026-10-07: Keep LEM display telemetry separate from packCurrent and its protection/SOC consumers.
+// Raw LEM telemetry; the selected source policy decides whether it controls the BMS.
 static volatile int32_t modCANLEMCAB500CurrentMilliAmps;
 static volatile uint32_t modCANLEMCAB500LastMessageTick;
 static volatile bool modCANLEMCAB500MessageValid;
@@ -156,6 +158,7 @@ void modCANInit(modPowerElectronicsPackStateTypedef *packState, modConfigGeneral
 	modCANSendStatusVESCLastTisk = HAL_GetTick();
 	modCANSafetyCANMessageTimeout = HAL_GetTick();
 	modCANErrorLastTick = HAL_GetTick();
+	modCANLastRXDifferLastTick = HAL_GetTick();
 
 }
 
@@ -185,7 +188,7 @@ void modCANTask(void){
 		modCANErrorLastTick = HAL_GetTick();
 	}
 	
-	if(modCANGeneralConfigHandle->emitStatusOverCAN) {
+	if(modCANGeneralConfigHandle->emitStatusOverCAN && modPowerElectronicsCurrentReady()) {
 		if(modCANGeneralConfigHandle->emitStatusProtocol == canEmitProtocolDieBieEngineering) {
 			// Send status messages with interval
 			if(modDelayTick1ms(&modCANSendStatusFastLastTisk,200))                        // 5 Hz
@@ -201,7 +204,9 @@ void modCANTask(void){
 	}
 	//AE 06.01.2025 VICTRON Communications
 
-	if(modDelayTick1ms(&modCANSendStatusFastLastTisk,200)){
+	if(modDelayTick1ms(&modCANSendVictronLastTick,200)){
+	  bool currentReady = modPowerElectronicsCurrentReady();
+	  if(!currentReady) { chargecurrent = 0; discurrent = 0; }
 	  // Send Charge and Discharge Current and voltage limits to Viscton GX device
 	      sendIndex = 0;
 	      libBufferAppend_int16_LSBFirst(buffer, chargevoltage / 100, &sendIndex); //Maximun Charge Voltage (upper voltage limit) [mV / 100]
@@ -247,7 +252,8 @@ void modCANTask(void){
 	      libBufferAppend_int16_LSBFirst(buffer, (int16_t)(currentact * 10), &sendIndex); //Actual Pack Current x100
 	      libBufferAppend_int16_LSBFirst(buffer, (int16_t)(AvgTemperature * 10), &sendIndex); //Actual Temperature x10
 	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
-	      modCANTransmitStandardID(0x356, buffer, sendIndex);
+	      if(currentReady)
+	          modCANTransmitStandardID(0x356, buffer, sendIndex);
 
 
 	  // Send Alarm and warning to Victron GX device (TBD) --> All zeros no Error, no Warning
@@ -256,7 +262,8 @@ void modCANTask(void){
 	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
 	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
 	      libBufferAppend_int16_LSBFirst(buffer, 0, &sendIndex); //Stuffing 0
-	      modCANTransmitStandardID(0x35A, buffer, sendIndex);
+	      if(currentReady)
+	          modCANTransmitStandardID(0x35A, buffer, sendIndex);
 
 
 	  // Send bms name to Victron GX device
@@ -486,19 +493,18 @@ void CAN_RX0_IRQHandler(void) {
 }
 
 void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef *CanHandle) {
+	modCANLastRXDifferLastTick = HAL_GetTick();
 	// Handle CAN message	
 	if((*CanHandle->pRxMsg).IDE == CAN_ID_STD) {         // Standard ID
-		// CODEX 2026-10-07: Decode the CAB 500-C/SP7 standard frame without feeding the BMS control current.
-		if((*CanHandle->pRxMsg).StdId == MOD_CAN_LEM_CAB500_CAN_ID && (*CanHandle->pRxMsg).DLC == 8) {
+		// Receive CAB500 telemetry independently of the configured current source.
+		if((*CanHandle->pRxMsg).StdId == MOD_CAN_LEM_CAB500_CAN_ID) {
 			CanRxMsgTypeDef *rxmsg = CanHandle->pRxMsg;
 			// CODEX 2026-10-07: The trace confirms current bytes 0..3 are big-endian offset-binary mA.
 			// 0x80000000 represents 0 mA; the error flag is bit 0 of byte 4.
-			uint32_t rawCurrent = ((uint32_t)rxmsg->Data[0] << 24) |
-			                      ((uint32_t)rxmsg->Data[1] << 16) |
-			                      ((uint32_t)rxmsg->Data[2] << 8)  |
-			                       (uint32_t)rxmsg->Data[3];
-			if((rxmsg->Data[4] & 0x01U) == 0U) {
-				modCANLEMCAB500CurrentMilliAmps = (int32_t)((int64_t)rawCurrent - 2147483648LL);
+			int32_t milliAmps;
+			if(rxmsg->DLC == 8 && rxmsg->RTR == CAN_RTR_DATA &&
+			   modCurrentSourceDecodeLEM(rxmsg->Data, &milliAmps)) {
+				modCANLEMCAB500CurrentMilliAmps = milliAmps;
 				modCANLEMCAB500LastMessageTick = HAL_GetTick();
 				modCANLEMCAB500MessageValid = true;
 			} else {
@@ -526,12 +532,18 @@ void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef *CanHandle) {
 
 // CODEX 2026-10-07: Return only a valid sample received within the freshness window.
 bool modCANGetLEMCAB500Current(float *current) {
-	if(current == NULL || !modCANLEMCAB500MessageValid ||
-	   (HAL_GetTick() - modCANLEMCAB500LastMessageTick) > MOD_CAN_LEM_CAB500_TIMEOUT_MS) {
+	uint32_t irqState = __get_PRIMASK();
+	__disable_irq();
+	bool valid = modCANLEMCAB500MessageValid;
+	uint32_t tick = modCANLEMCAB500LastMessageTick;
+	int32_t milliAmps = modCANLEMCAB500CurrentMilliAmps;
+	__set_PRIMASK(irqState);
+	if(current == NULL || !valid ||
+	   (HAL_GetTick() - tick) >= MOD_CAN_LEM_CAB500_TIMEOUT_MS) {
 		return false;
 	}
 
-	*current = (float)modCANLEMCAB500CurrentMilliAmps / 1000.0f;
+	*current = (float)milliAmps / 1000.0f;
 	return true;
 }
 
@@ -1028,10 +1040,7 @@ void modCANHandleSubTaskCharger(void) {
 }
 
 void modCANRXWatchDog(void){
-  if(modCANHandle.pRxMsg->ExtId != modCANLastRXID){
-	  modCANLastRXID = modCANHandle.pRxMsg->ExtId;
-		modCANLastRXDifferLastTick = HAL_GetTick();
-	}
+  // Any received frame is activity, including repeated standard LEM frames.
 	
 	if(modDelayTick1ms(&modCANLastRXDifferLastTick,1000)){
 		modCANInit(modCANPackStateHandle,modCANGeneralConfigHandle);
@@ -1064,6 +1073,7 @@ void modCANOpenChargerStartNode(void) {
 }
 
 void modCANOpenChargerSetCurrentVoltageReady(float current,float voltage,bool ready) {
+	if(!modPowerElectronicsCurrentReady()) { current = 0.0f; ready = false; }
 	uint32_t modCANChargerRequestVoltageInt = voltage * 1024;
 	uint16_t modCANChargerRequestCurrentInt = current * 16;
 	

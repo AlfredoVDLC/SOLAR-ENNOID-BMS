@@ -391,9 +391,12 @@ p, li { white-space: pre-wrap; }
             <cDefine>CELL_MONITOR_IC_TYPE</cDefine>
             <valInt>1</valInt>
             <enumNames>NoSource</enumNames>
-            <enumNames>ENNOID-BMS current path</enumNames>
+            <enumNames>Shunt ISL28022 (I2C)</enumNames>
             <enumNames>CAN-&gt;DieBieShunt</enumNames>
             <enumNames>CAN-&gt;Isabellenhutte</enumNames>
+            <enumNames>Shunt INA226 (I2C)</enumNames>
+            <enumNames>CAN-&gt;VESC</enumNames>
+            <enumNames>LEM CAB500 (CAN, fail-stop)</enumNames>
         </packCurrentDataSource>
         <buzzerSignalSource>
             <longName>Signal source</longName>

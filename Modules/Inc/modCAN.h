@@ -47,7 +47,7 @@
 
 // CODEX 2026-10-07: CAB 500-C/SP7 defaults; the sensor bitrate must match the BMS bus (configured to 250 kbps here).
 #define MOD_CAN_LEM_CAB500_CAN_ID		0x3C2U
-#define MOD_CAN_LEM_CAB500_TIMEOUT_MS	500U
+#define MOD_CAN_LEM_CAB500_TIMEOUT_MS	200U
 
 void		modCANInit(modPowerElectronicsPackStateTypedef *packState, modConfigGeneralConfigStructTypedef *generalConfigPointer);
 void		modCANTask(void);
