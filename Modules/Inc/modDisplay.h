@@ -33,7 +33,10 @@
 
 typedef struct {
 	float StateOfCharge;
-	float Current;
+	// CODEX 2026-10-07: Keep the original shunt and LEM readings separate on the display.
+	float ShuntCurrent;
+	float LEMCurrent;
+	uint8_t LEMCurrentValid;
 	float PackVoltage;
 	float LoadVoltage;
 	float HighestTemp;

@@ -20,6 +20,9 @@
 
 #include "modOperationalState.h"
 
+// CODEX 2026-10-07: Declare the display-only CAN accessor without importing unrelated CAN declarations.
+extern bool modCANGetLEMCAB500Current(float *current);
+
 OperationalStateTypedef modOperationalStateLastState;
 OperationalStateTypedef modOperationalStateCurrentState;
 OperationalStateTypedef modOperationalStateNewState;
@@ -43,6 +46,14 @@ uint32_t modOperationalStateNotUsedTime;
 uint32_t modOperationalStatePSPDisableDelay;
 uint32_t modOperationalStateWatchDogCountdownLastTick;
 bool modOperationalStateForceOn;
+
+// CODEX 2026-10-07: Populate separate shunt and LEM display readings; packCurrent remains the BMS control value.
+static void modOperationalStateUpdateDisplayCurrents(void) {
+	float lemCurrent;
+	modOperationalStateDisplayData.ShuntCurrent = fabsf(modOperationalStatePackStatehandle->packCurrent);
+	modOperationalStateDisplayData.LEMCurrentValid = modCANGetLEMCAB500Current(&lemCurrent);
+	modOperationalStateDisplayData.LEMCurrent = modOperationalStateDisplayData.LEMCurrentValid ? fabsf(lemCurrent) : 0.0f;
+}
 
 void modOperationalStateInit(modPowerElectronicsPackStateTypedef *packState, modConfigGeneralConfigStructTypedef *generalConfigPointer, modStateOfChargeStructTypeDef *generalStateOfCharge) {
 	modOperationalStatePackStatehandle = packState;
@@ -138,7 +149,7 @@ void modOperationalStateTask(void) {
 			
 			modOperationalStateUpdateStates();
 			modOperationalStateDisplayData.StateOfCharge = modOperationalStateGeneralStateOfCharge->generalStateOfCharge;
-			modOperationalStateDisplayData.Current = fabs(modOperationalStatePackStatehandle->packCurrent);
+			modOperationalStateUpdateDisplayCurrents();
 			modOperationalStateDisplayData.ChargerVoltage = fabs(modOperationalStatePackStatehandle->chargerVoltage);
 			modOperationalStateDisplayData.CellMismatch = fabs(modOperationalStatePackStatehandle->cellVoltageMisMatch);
 			modOperationalStateDisplayData.LowestCellVoltage = fabs(modOperationalStatePackStatehandle->cellVoltageLow);
@@ -257,7 +268,7 @@ void modOperationalStateTask(void) {
 			modOperationalStateUpdateStates();
 			
 			modOperationalStateDisplayData.StateOfCharge = modOperationalStateGeneralStateOfCharge->generalStateOfCharge;
-			modOperationalStateDisplayData.Current = fabs(modOperationalStatePackStatehandle->packCurrent);
+			modOperationalStateUpdateDisplayCurrents();
 			modOperationalStateDisplayData.PackVoltage = fabs(modOperationalStatePackStatehandle->packVoltage);
 			modOperationalStateDisplayData.HighestTemp = fabs(modOperationalStatePackStatehandle->tempBatteryHigh);
 			modOperationalStateDisplayData.AverageTemp = fabs(modOperationalStatePackStatehandle->tempBatteryAverage);

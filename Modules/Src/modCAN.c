@@ -53,6 +53,10 @@ static can_status_msg_2 stat_msgs_2[CAN_STATUS_MSGS_TO_STORE];
 static can_status_msg_3 stat_msgs_3[CAN_STATUS_MSGS_TO_STORE];
 static can_status_msg_4 stat_msgs_4[CAN_STATUS_MSGS_TO_STORE];
 static can_status_msg_5 stat_msgs_5[CAN_STATUS_MSGS_TO_STORE];
+// CODEX 2026-10-07: Keep LEM display telemetry separate from packCurrent and its protection/SOC consumers.
+static volatile int32_t modCANLEMCAB500CurrentMilliAmps;
+static volatile uint32_t modCANLEMCAB500LastMessageTick;
+static volatile bool modCANLEMCAB500MessageValid;
 
 /*
 bool modCANPing(uint8_t controller_id, HW_TYPE *hw_type) {
@@ -484,7 +488,25 @@ void CAN_RX0_IRQHandler(void) {
 void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef *CanHandle) {
 	// Handle CAN message	
 	if((*CanHandle->pRxMsg).IDE == CAN_ID_STD) {         // Standard ID
-		modCANHandleCANOpenMessage(*CanHandle->pRxMsg);
+		// CODEX 2026-10-07: Decode the CAB 500-C/SP7 standard frame without feeding the BMS control current.
+		if((*CanHandle->pRxMsg).StdId == MOD_CAN_LEM_CAB500_CAN_ID && (*CanHandle->pRxMsg).DLC == 8) {
+			CanRxMsgTypeDef *rxmsg = CanHandle->pRxMsg;
+			// CODEX 2026-10-07: The trace confirms current bytes 0..3 are big-endian offset-binary mA.
+			// 0x80000000 represents 0 mA; the error flag is bit 0 of byte 4.
+			uint32_t rawCurrent = ((uint32_t)rxmsg->Data[0] << 24) |
+			                      ((uint32_t)rxmsg->Data[1] << 16) |
+			                      ((uint32_t)rxmsg->Data[2] << 8)  |
+			                       (uint32_t)rxmsg->Data[3];
+			if((rxmsg->Data[4] & 0x01U) == 0U) {
+				modCANLEMCAB500CurrentMilliAmps = (int32_t)((int64_t)rawCurrent - 2147483648LL);
+				modCANLEMCAB500LastMessageTick = HAL_GetTick();
+				modCANLEMCAB500MessageValid = true;
+			} else {
+				modCANLEMCAB500MessageValid = false;
+			}
+		} else {
+			modCANHandleCANOpenMessage(*CanHandle->pRxMsg);
+		}
 	}else{                                               // Extended ID
 		if((*CanHandle->pRxMsg).ExtId == 0x0A23){
 			modCANHandleKeepAliveSafetyMessage(*CanHandle->pRxMsg);
@@ -500,6 +522,17 @@ void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef *CanHandle) {
 	}
 	
   HAL_CAN_Receive_IT(&modCANHandle, CAN_FIFO0);
+}
+
+// CODEX 2026-10-07: Return only a valid sample received within the freshness window.
+bool modCANGetLEMCAB500Current(float *current) {
+	if(current == NULL || !modCANLEMCAB500MessageValid ||
+	   (HAL_GetTick() - modCANLEMCAB500LastMessageTick) > MOD_CAN_LEM_CAB500_TIMEOUT_MS) {
+		return false;
+	}
+
+	*current = (float)modCANLEMCAB500CurrentMilliAmps / 1000.0f;
+	return true;
 }
 
 void modCANSubTaskHandleCommunication(void) {
@@ -1189,5 +1222,3 @@ void comm_can_psw_switch(int id, bool is_on, bool plot) {
 			buffer, send_index);
 }
 */
-
-

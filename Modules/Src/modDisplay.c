@@ -89,6 +89,19 @@ void modDisplayShowInfo(modDisplayInfoType newState, modDisplayDataTypedef modDi
 				if(modDisplayData.DisplayStyle==0){
 					driverSWSSD1306FillBuffer(libLogos[LOGO_LOAD],SSD1306_LCDHEIGHT*SSD1306_LCDWIDTH/8);
 					libGraphicsFillRect(7,7,(uint16_t)(modDisplayData.StateOfCharge/100*106),50,WHITE);
+					// CODEX 2026-10-07: Overlay shunt and LEM current readings on the load graphic.
+					libGraphicsSetTextSize(0);
+					libGraphicsSetTextColor_0(INVERSE);
+					libGraphicsSetCursor(0,56);
+					libGraphicsWrite('S'); libGraphicsWrite(':');
+					modDisplayWrite(modDisplayData.ShuntCurrent,1);
+					libGraphicsWrite('A');
+					libGraphicsSetCursor(64,56);
+					libGraphicsWrite('L'); libGraphicsWrite(':');
+					if(modDisplayData.LEMCurrentValid)
+						modDisplayWrite(modDisplayData.LEMCurrent,1);
+					else { libGraphicsWrite('-'); libGraphicsWrite('-'); }
+					libGraphicsWrite('A');
 				}else{
 					libGraphicsSetTextSize(2);
 					if(modDisplayDispLoadShuffle == 0){
@@ -101,12 +114,18 @@ void modDisplayShowInfo(modDisplayInfoType newState, modDisplayDataTypedef modDi
 						libGraphicsWrite(':');
 						modDisplayWrite(modDisplayData.StateOfCharge,0);
 						libGraphicsWrite('%');
-					//Display current
+						// CODEX 2026-10-07: Show both current sources together on the first load screen.
+						libGraphicsSetTextSize(1);
 						libGraphicsSetCursor(7,32);
-						libGraphicsWrite('I');
-						libGraphicsWrite(':');
-						modDisplayWrite(modDisplayData.Current,2);
-						libGraphicsWrite('A');							
+						libGraphicsWrite('S'); libGraphicsWrite(':');
+						modDisplayWrite(modDisplayData.ShuntCurrent,1);
+						libGraphicsWrite('A');
+						libGraphicsSetCursor(7,48);
+						libGraphicsWrite('L'); libGraphicsWrite(':');
+						if(modDisplayData.LEMCurrentValid)
+							modDisplayWrite(modDisplayData.LEMCurrent,1);
+						else { libGraphicsWrite('-'); libGraphicsWrite('-'); }
+						libGraphicsWrite('A');
 					}else if(modDisplayDispLoadShuffle == 1){
 					//Display Battery Voltage
 						libGraphicsSetCursor(7,7);
@@ -182,20 +201,19 @@ void modDisplayShowInfo(modDisplayInfoType newState, modDisplayDataTypedef modDi
 				libGraphicsWrite(':');
 				modDisplayWrite(modDisplayData.LowestCellVoltage,2);
 				libGraphicsWrite('V');
-			//Display current
+				// CODEX 2026-10-07: Show shunt and LEM side by side; retain charger voltage on the row above.
+				libGraphicsSetCursor(64,43);
+				libGraphicsWrite('V'); libGraphicsWrite('c'); libGraphicsWrite('h'); libGraphicsWrite(':');
+				modDisplayWrite(modDisplayData.ChargerVoltage,1); libGraphicsWrite('V');
 				libGraphicsSetCursor(7,57);
-				libGraphicsWrite('I');
-				libGraphicsWrite(':');
-				modDisplayWrite(modDisplayData.Current,1);
+				libGraphicsWrite('S'); libGraphicsWrite(':');
+				modDisplayWrite(modDisplayData.ShuntCurrent,1); libGraphicsWrite('A');
+				libGraphicsSetCursor(64,57);
+				libGraphicsWrite('L'); libGraphicsWrite(':');
+				if(modDisplayData.LEMCurrentValid)
+					modDisplayWrite(modDisplayData.LEMCurrent,1);
+				else { libGraphicsWrite('-'); libGraphicsWrite('-'); }
 				libGraphicsWrite('A');
-				libGraphicsWrite(' ');
-			//Display charger voltage
-				libGraphicsWrite('V');
-				libGraphicsWrite('c');
-				libGraphicsWrite('h');
-				libGraphicsWrite(':');
-				modDisplayWrite(modDisplayData.ChargerVoltage,1);
-				libGraphicsWrite('V');
 				break;
 			case DISP_MODE_POWEROFF:
 				driverSWSSD1306ClearDisplay();

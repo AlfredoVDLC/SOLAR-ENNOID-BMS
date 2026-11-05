@@ -45,6 +45,10 @@
 #define CAN_STATUS_MSGS_TO_STORE		10
 #define CAN_BMS_STATUS_MSGS_TO_STORE		185
 
+// CODEX 2026-10-07: CAB 500-C/SP7 defaults; the sensor bitrate must match the BMS bus (configured to 250 kbps here).
+#define MOD_CAN_LEM_CAB500_CAN_ID		0x3C2U
+#define MOD_CAN_LEM_CAB500_TIMEOUT_MS	500U
+
 void		modCANInit(modPowerElectronicsPackStateTypedef *packState, modConfigGeneralConfigStructTypedef *generalConfigPointer);
 void		modCANTask(void);
 uint32_t	modCANGetDestinationID(CanRxMsgTypeDef canMsg);
@@ -75,6 +79,8 @@ void		modCANOpenChargerStartNode(void);
 void		modCANOpenChargerSetCurrentVoltageReady(float current,float voltage,bool ready);
 
 uint16_t 	modCANGetVESCCurrent(void);
+// CODEX 2026-10-07: Read the most recent valid, fresh LEM CAB 500-C/SP7 current sample.
+bool		modCANGetLEMCAB500Current(float *current);
 
 can_status_msg *comm_can_get_status_msg_index(int index);
 can_status_msg *comm_can_get_status_msg_id(int id);

@@ -60,7 +60,8 @@ float currentOffset = 0.0f;
 //float currentOffsetTemp = 0.0f;
 uint8_t currentOffsetCounter = 0;
 
-//uint32_t hardUnderVoltageFlags, hardOverVoltageFlags;
+// CODEX 2026-10-06: Restore storage for the enabled hardware voltage flag read.
+static uint32_t hardUnderVoltageFlags, hardOverVoltageFlags;
 
 void modPowerElectronicsInit(modPowerElectronicsPackStateTypedef *packState, modConfigGeneralConfigStructTypedef *generalConfigPointer) {
 	modPowerElectronicsGeneralConfigHandle						= generalConfigPointer;
@@ -450,7 +451,7 @@ void modPowerElectronicsSubTaskVoltageWatch(void) {
 	static bool lastdisChargeLCAllowed = false;
 	static bool lastChargeAllowed = false;
 	
-	//modPowerElectronicsCellMonitorsReadVoltageFlags(&hardUnderVoltageFlags,&hardOverVoltageFlags);
+	modPowerElectronicsCellMonitorsReadVoltageFlags(&hardUnderVoltageFlags,&hardOverVoltageFlags);
 	modPowerElectronicsCalculateCellStats();
     modPowerElectronicsPackStateHandle->faultState = FAULT_CODE_NONE; //AE 28.12.2024 Test
 	if(modPowerElectronicsPackStateHandle->packOperationalCellState != PACK_STATE_ERROR_HARD_CELLVOLTAGE && modPowerElectronicsPackStateHandle->packOperationalCellState != PACK_STATE_ERROR_TEMPERATURE) {
@@ -462,13 +463,13 @@ void modPowerElectronicsSubTaskVoltageWatch(void) {
 			modPowerElectronicsDisChargeLCRetryLastTick = HAL_GetTick();
 			modPowerElectronicsPackStateHandle->faultState = FAULT_CODE_CELL_SOFT_UNDER_VOLTAGE;
 		}
-		/* AE28.12.2024 test propouses
+// AE28.12.2024 test propouses --> back to normal operation 10.9.2026
 		if(modPowerElectronicsPackStateHandle->tempBatteryHigh >= modPowerElectronicsGeneralConfigHandle->allowedTempBattDischargingMax){
 			modPowerElectronicsPackStateHandle->disChargeLCAllowed = false;
 			modPowerElectronicsDisChargeLCRetryLastTick = HAL_GetTick();
 			modPowerElectronicsPackStateHandle->faultState = FAULT_CODE_DISCHARGE_OVER_TEMP_CELLS;
 		}
-*/
+
 		if(modPowerElectronicsPackStateHandle->tempBatteryLow <= modPowerElectronicsGeneralConfigHandle->allowedTempBattDischargingMin){
 			modPowerElectronicsPackStateHandle->disChargeLCAllowed = false;
 			modPowerElectronicsDisChargeLCRetryLastTick = HAL_GetTick();
@@ -480,13 +481,13 @@ void modPowerElectronicsSubTaskVoltageWatch(void) {
 			modPowerElectronicsChargeRetryLastTick = HAL_GetTick();
 			modPowerElectronicsPackStateHandle->faultState = FAULT_CODE_CELL_SOFT_OVER_VOLTAGE;
 		}
-/* AE28.12.2024 test propouses
+// AE28.12.2024 test propouses--> back to normal operation 10.9.2026
 		if( modPowerElectronicsPackStateHandle->tempBatteryHigh >= modPowerElectronicsGeneralConfigHandle->allowedTempBattChargingMax) {
 			modPowerElectronicsPackStateHandle->chargeAllowed = false;
 			modPowerElectronicsChargeRetryLastTick = HAL_GetTick();
 			modPowerElectronicsPackStateHandle->faultState = FAULT_CODE_CHARGE_OVER_TEMP_CELLS;
 		}
-*/
+
 		if(modPowerElectronicsPackStateHandle->tempBatteryLow <= modPowerElectronicsGeneralConfigHandle->allowedTempBattChargingMin) {
 			modPowerElectronicsPackStateHandle->chargeAllowed = false;
 			modPowerElectronicsChargeRetryLastTick = HAL_GetTick();
@@ -529,7 +530,7 @@ void modPowerElectronicsSubTaskVoltageWatch(void) {
 		modPowerElectronicsUnderAndOverVoltageErrorCount = 0;
 	
 		// Handle temperature limits
-	/* AE 28.12.2024 Temperature control override for testing
+	 //AE 28.12.2024 Temperature control override for testing --> back to normal operation 10.9.2026
 	if(modPowerElectronicsPackStateHandle->tempBatteryHigh > (modPowerElectronicsGeneralConfigHandle->allowedTempBattDischargingMax + 10.0f) || modPowerElectronicsPackStateHandle->tempBatteryLow < (modPowerElectronicsGeneralConfigHandle->allowedTempBattDischargingMin - 10.0f)) {
 		if(modPowerElectronicsUnderAndOverTemperatureErrorCount++ > modPowerElectronicsGeneralConfigHandle->maxUnderAndOverTemperatureErrorCount){
 			modPowerElectronicsPackStateHandle->packOperationalCellState = PACK_STATE_ERROR_TEMPERATURE;
@@ -539,7 +540,7 @@ void modPowerElectronicsSubTaskVoltageWatch(void) {
 		modPowerElectronicsPackStateHandle->chargeAllowed = false;
 	}else
 		modPowerElectronicsUnderAndOverTemperatureErrorCount = 0;
-	*/
+
 	// update outputs directly if needed
 	if((lastChargeAllowed != modPowerElectronicsPackStateHandle->chargeAllowed) || (lastdisChargeLCAllowed != modPowerElectronicsPackStateHandle->disChargeLCAllowed)) {
 		lastChargeAllowed = modPowerElectronicsPackStateHandle->chargeAllowed;
@@ -670,13 +671,15 @@ void modPowerElectronicsCalcTempStats(void) {
 	for(uint8_t sensorModulePointer = 0; sensorModulePointer < modPowerElectronicsGeneralConfigHandle->cellMonitorICCount; sensorModulePointer++) {
 		for(uint8_t sensorPointer = 0; sensorPointer < modPowerElectronicsGeneralConfigHandle->noOfTempSensorPerModule; sensorPointer++) {
 			if(modPowerElectronicsGeneralConfigHandle->tempEnableMaskBattery & (1 << sensorPointer)){
-				if(modPowerElectronicsPackStateHandle->auxVoltagesIndividual[sensorPointer].auxVoltage > tempBatteryMax)
-					tempBatteryMax = modPowerElectronicsPackStateHandle->auxVoltagesIndividual[sensorPointer].auxVoltage;
+				// CODEX 2026-10-06: Use this module's sensors in the flattened array.
+				uint16_t sensorIndex = (uint16_t)sensorModulePointer * modPowerElectronicsGeneralConfigHandle->noOfTempSensorPerModule + sensorPointer;
+				if(modPowerElectronicsPackStateHandle->auxVoltagesIndividual[sensorIndex].auxVoltage > tempBatteryMax)
+					tempBatteryMax = modPowerElectronicsPackStateHandle->auxVoltagesIndividual[sensorIndex].auxVoltage;
 				
-				if(modPowerElectronicsPackStateHandle->auxVoltagesIndividual[sensorPointer].auxVoltage < tempBatteryMin)
-					tempBatteryMin = modPowerElectronicsPackStateHandle->auxVoltagesIndividual[sensorPointer].auxVoltage;
+				if(modPowerElectronicsPackStateHandle->auxVoltagesIndividual[sensorIndex].auxVoltage < tempBatteryMin)
+					tempBatteryMin = modPowerElectronicsPackStateHandle->auxVoltagesIndividual[sensorIndex].auxVoltage;
 				
-				tempBatterySum += modPowerElectronicsPackStateHandle->auxVoltagesIndividual[sensorPointer].auxVoltage;		
+				tempBatterySum += modPowerElectronicsPackStateHandle->auxVoltagesIndividual[sensorIndex].auxVoltage;
 				tempBatterySumCount++;
 			}
 		}
@@ -686,13 +689,15 @@ void modPowerElectronicsCalcTempStats(void) {
 	for(uint8_t sensorModulePointer = 0; sensorModulePointer < modPowerElectronicsGeneralConfigHandle->noOfExpansionBoard; sensorModulePointer++) {
 		for(uint8_t sensorPointer = 0; sensorPointer < modPowerElectronicsGeneralConfigHandle->noOfTempSensorPerExpansionBoard; sensorPointer++) {
 			if(modPowerElectronicsGeneralConfigHandle->tempEnableMaskExpansion & (1 << sensorPointer)){
-				if(modPowerElectronicsPackStateHandle->expVoltagesIndividual[sensorPointer].expVoltage > tempBatteryMax)
-					tempBatteryMax = modPowerElectronicsPackStateHandle->expVoltagesIndividual[sensorPointer].expVoltage;
+				// CODEX 2026-10-06: Use this module's sensors in the flattened array.
+				uint16_t sensorIndex = (uint16_t)sensorModulePointer * modPowerElectronicsGeneralConfigHandle->noOfTempSensorPerExpansionBoard + sensorPointer;
+				if(modPowerElectronicsPackStateHandle->expVoltagesIndividual[sensorIndex].expVoltage > tempBatteryMax)
+					tempBatteryMax = modPowerElectronicsPackStateHandle->expVoltagesIndividual[sensorIndex].expVoltage;
 			
-				if(modPowerElectronicsPackStateHandle->expVoltagesIndividual[sensorPointer].expVoltage < tempBatteryMin)
-					tempBatteryMin = modPowerElectronicsPackStateHandle->expVoltagesIndividual[sensorPointer].expVoltage;
+				if(modPowerElectronicsPackStateHandle->expVoltagesIndividual[sensorIndex].expVoltage < tempBatteryMin)
+					tempBatteryMin = modPowerElectronicsPackStateHandle->expVoltagesIndividual[sensorIndex].expVoltage;
 		
-			tempBatterySum += modPowerElectronicsPackStateHandle->expVoltagesIndividual[sensorPointer].expVoltage;
+			tempBatterySum += modPowerElectronicsPackStateHandle->expVoltagesIndividual[sensorIndex].expVoltage;
 			tempBatterySumCount++;		
 		}
 	}

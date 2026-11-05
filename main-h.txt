@@ -3,47 +3,51 @@ main.elf:     file format elf32-littlearm
 
 Sections:
 Idx Name          Size      VMA       LMA       File off  Algn
-  0 .isr_vector   00000188  08000000  08000000  00010000  2**2
+  0 .isr_vector   00000188  08000000  08000000  00001000  2**2
                   CONTENTS, ALLOC, LOAD, DATA
-  1 .fill         00001000  08000800  08000800  00010800  2**0
+  1 .fill         00001000  08000800  08000800  00001800  2**0
                   CONTENTS, ALLOC, LOAD, DATA
-  2 .text         00011de0  08001800  08001800  00011800  2**4
+  2 .text         00013f38  08001800  08001800  00002800  2**6
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-  3 .rodata       00004838  080135e0  080135e0  000235e0  2**3
+  3 .rodata       0000472c  08015738  08015738  00016738  2**3
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-  4 .init_array   00000004  08017e18  08017e18  00027e18  2**2
+  4 .ARM          00000008  08019e64  08019e64  0001ae64  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  5 .init_array   00000004  08019e6c  08019e6c  0001ae6c  2**2
                   CONTENTS, ALLOC, LOAD, DATA
-  5 .fini_array   00000004  08017e1c  08017e1c  00027e1c  2**2
+  6 .fini_array   00000004  08019e70  08019e70  0001ae70  2**2
                   CONTENTS, ALLOC, LOAD, DATA
-  6 .data         00000200  20000000  08017e20  00030000  2**2
+  7 .data         000001fc  20000000  08019e74  0001b000  2**2
                   CONTENTS, ALLOC, LOAD, DATA
-  7 .ccmram       00000000  10000000  10000000  00030200  2**0
+  8 .ccmram       00000000  10000000  10000000  0001b1fc  2**0
                   CONTENTS
-  8 .bss          00006ae4  20000200  20000200  00030200  2**3
+  9 .bss          00006c40  20000200  20000200  0001b200  2**3
                   ALLOC
-  9 ._user_heap_stack 00000600  20006ce4  20006ce4  00030200  2**0
+ 10 ._user_heap_stack 00000600  20006e40  20006e40  0001b200  2**0
                   ALLOC
- 10 .ARM.attributes 00000030  00000000  00000000  00030200  2**0
+ 11 .ARM.attributes 00000030  00000000  00000000  0001b1fc  2**0
                   CONTENTS, READONLY
- 11 .debug_info   00036503  00000000  00000000  00030230  2**0
-                  CONTENTS, READONLY, DEBUGGING, OCTETS
- 12 .debug_abbrev 00007cce  00000000  00000000  00066733  2**0
-                  CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_aranges 00001a50  00000000  00000000  0006e401  2**0
-                  CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_ranges 00002df0  00000000  00000000  0006fe51  2**0
-                  CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_line   000226e7  00000000  00000000  00072c41  2**0
-                  CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_str    0000cf48  00000000  00000000  00095328  2**0
-                  CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .comment      00000049  00000000  00000000  000a2270  2**0
+ 12 .comment      0000006f  00000000  00000000  0001b22c  2**0
                   CONTENTS, READONLY
- 18 .debug_frame  00006598  00000000  00000000  000a22bc  2**2
+ 13 .debug_info   00058520  00000000  00000000  0001b29b  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .debug_loc    00018ebc  00000000  00000000  000a8854  2**0
+ 14 .debug_abbrev 0000fc92  00000000  00000000  000737bb  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 20 .stab         000000cc  00000000  00000000  000c1710  2**2
-                  CONTENTS, READONLY, DEBUGGING
- 21 .stabstr      000001b9  00000000  00000000  000c17dc  2**0
-                  CONTENTS, READONLY, DEBUGGING
+ 15 .debug_aranges 00002470  00000000  00000000  00083450  2**3
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 16 .debug_ranges 00002448  00000000  00000000  000858c0  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 17 .debug_line   000300c0  00000000  00000000  00087d08  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 18 .debug_str    0000f21f  00000000  00000000  000b7dc8  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 19 .debug_frame  00006738  00000000  00000000  000c6fe8  2**2
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 20 .debug_loclists 0000cccc  00000000  00000000  000cd720  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 21 .debug_rnglists 00000b0f  00000000  00000000  000da3ec  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 22 .debug_loc    00015b0b  00000000  00000000  000daefb  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 23 .debug_line_str 0000015c  00000000  00000000  000f0a06  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS

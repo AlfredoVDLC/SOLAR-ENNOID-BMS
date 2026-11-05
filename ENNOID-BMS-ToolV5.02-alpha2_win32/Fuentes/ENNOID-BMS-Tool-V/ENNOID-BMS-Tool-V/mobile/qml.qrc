@@ -1,0 +1,31 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qtquickcontrols2.conf</file>
+    </qresource>
+    <qresource prefix="/mobile">
+        <file>main.qml</file>
+        <file>ConnectBle.qml</file>
+        <file>RtData.qml</file>
+        <file>FwUpdate.qml</file>
+        <file>FilePicker.qml</file>
+        <file>ParamEditDouble.qml</file>
+        <file>ParamEditors.qml</file>
+        <file>DoubleSpinBox.qml</file>
+        <file>ParamEditInt.qml</file>
+        <file>ParamEditEnum.qml</file>
+        <file>ParamEditBool.qml</file>
+        <file>ParamEditString.qml</file>
+        <file>ParamEditSeparator.qml</file>
+        <file>PpmMap.qml</file>
+        <file>NrfPair.qml</file>
+        <file>Controls.qml</file>
+        <file>Terminal.qml</file>
+        <file>ConfigPageGeneral.qml</file>
+        <file>ConfigPageCell.qml</file>
+        <file>ConfigPageSwitch.qml</file>
+        <file>ConfigPageDisplay.qml</file>
+        <file>ProgressBar.qml</file>
+        <file>PairingDialog.qml</file>
+        <file>ConfigPageSignal.qml</file>
+    </qresource>
+</RCC>
