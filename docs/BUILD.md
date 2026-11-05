@@ -6,6 +6,7 @@
 cc -std=c99 -Wall -Wextra -Werror -I Modules/Inc tests/test_current_source.c -o /tmp/test_current_source
 /tmp/test_current_source
 python3 tests/test_current_integration.py
+python3 tests/test_can_freshness.py
 make -B -j4
 arm-none-eabi-objcopy -O ihex --remove-section=.fill main.elf SolarEnnoid_BMS-preserve-config.hex
 ```
