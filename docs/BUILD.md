@@ -35,3 +35,8 @@ El paquete Windows copia las DLL de Qt y MinGW y los directorios plugins/qml
 desde la instalación usada al compilar. qt.conf define rutas relativas. La
 compilación incluye una prueba de arranque de 10 s sin Qt en PATH; no sustituye
 las pruebas de comunicación serie y funcionamiento del BMS.
+
+Validado el 2026-11-06: compilación, empaquetado y prueba de arranque Windows
+correctos en https://github.com/AlfredoVDLC/SOLAR-ENNOID-BMS/actions/runs/42189193370 .
+Artefacto: BMS-Tool-Windows-LEM-5.2.1-rc1. El ejecutable conserva el nombre
+ENNOID-BMS-ToolV1.4.exe del proyecto original; la ventana identifica Solar 5.2.1-rc1.
