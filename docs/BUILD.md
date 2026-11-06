@@ -30,3 +30,8 @@ paquetes de configuración ni a la estructura persistente de EEPROM.
 2026-11-06: primera compilación Windows completó el enlace del EXE; el
 empaquetado falló al localizar el plugin de plataforma. El workflow fija las
 rutas de windeployqt y qmake a la misma instalación Qt para evitar mezclar herramientas.
+
+El paquete Windows copia las DLL de Qt y MinGW y los directorios plugins/qml
+desde la instalación usada al compilar. qt.conf define rutas relativas. La
+compilación incluye una prueba de arranque de 10 s sin Qt en PATH; no sustituye
+las pruebas de comunicación serie y funcionamiento del BMS.

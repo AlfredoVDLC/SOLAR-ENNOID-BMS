@@ -32,8 +32,25 @@ jobs:
           New-Item -ItemType Directory -Force package | Out-Null
           Copy-Item release/*.exe package/
           $exe = (Get-ChildItem package/*.exe | Select-Object -First 1).FullName
-          & "$env:QT_ROOT_DIR/bin/windeployqt.exe" --qmake "$env:QT_ROOT_DIR/bin/qmake.exe" --release --compiler-runtime $exe
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Deploy the matching Qt runtime explicitly (Qt 5.15 MinGW windeployqt
+          # can fail to classify the platform plugin on hosted runners).
+          Copy-Item "$env:QT_ROOT_DIR/bin/*.dll" package/
+          Copy-Item "$env:IQTA_TOOLS/mingw810_64/bin/*.dll" package/
+          Copy-Item "$env:QT_ROOT_DIR/plugins" package/plugins -Recurse
+          Copy-Item "$env:QT_ROOT_DIR/qml" package/qml -Recurse
+          "[Paths]`nPrefix=.`nPlugins=plugins`nQml2Imports=qml" | Set-Content package/qt.conf
+          if (!(Test-Path package/plugins/platforms/qwindows.dll)) {
+            throw "Missing Qt Windows platform plugin"
+          }
+          # Verify startup using only the deployed runtime, not the Qt installation.
+          Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QML2_IMPORT_PATH -ErrorAction SilentlyContinue
+          $env:PATH = "$env:SystemRoot/system32;$env:SystemRoot"
+          $app = Start-Process -FilePath $exe -WorkingDirectory (Resolve-Path package) -PassThru -RedirectStandardError package/startup-stderr.txt
+          Start-Sleep -Seconds 10
+          $app.Refresh()
+          if ($app.HasExited) { throw "BMS Tool exited during startup: $($app.ExitCode)" }
+          Stop-Process -Id $app.Id
       - uses: actions/upload-artifact@v4
         with:
           name: BMS-Tool-Windows-LEM-5.2.1-rc1
