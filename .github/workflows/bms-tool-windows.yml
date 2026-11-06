@@ -32,7 +32,7 @@ jobs:
           New-Item -ItemType Directory -Force package | Out-Null
           Copy-Item release/*.exe package/
           $exe = (Get-ChildItem package/*.exe | Select-Object -First 1).FullName
-          windeployqt --release --compiler-runtime $exe
+          & "$env:QT_ROOT_DIR/bin/windeployqt.exe" --qmake "$env:QT_ROOT_DIR/bin/qmake.exe" --release --compiler-runtime $exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:

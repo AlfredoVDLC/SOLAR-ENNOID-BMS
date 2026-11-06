@@ -26,3 +26,7 @@ Solar 5.2.1-rc1 al identificador de la ventana.
 
 El firmware debe conservar protocolo 5.2: no se ha añadido ningún byte a los
 paquetes de configuración ni a la estructura persistente de EEPROM.
+
+2026-11-06: primera compilación Windows completó el enlace del EXE; el
+empaquetado falló al localizar el plugin de plataforma. El workflow fija las
+rutas de windeployqt y qmake a la misma instalación Qt para evitar mezclar herramientas.
