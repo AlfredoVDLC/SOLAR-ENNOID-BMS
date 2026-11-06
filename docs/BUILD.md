@@ -40,3 +40,8 @@ Validado el 2026-11-06: compilación, empaquetado y prueba de arranque Windows
 correctos en https://github.com/AlfredoVDLC/SOLAR-ENNOID-BMS/actions/runs/42189193370 .
 Artefacto: BMS-Tool-Windows-LEM-5.2.1-rc1. El ejecutable conserva el nombre
 ENNOID-BMS-ToolV1.4.exe del proyecto original; la ventana identifica Solar 5.2.1-rc1.
+
+Nombre actualizado a petición del usuario: SOLAR-ENNOID-BMS-ToolV1.4.1.exe.
+Se ha renombrado el ejecutable Windows ya verificado, sin alterar su contenido,
+y el TARGET de qmake genera ese nombre en las próximas compilaciones.
+La versión del firmware permanece en 5.2.1-rc1.
